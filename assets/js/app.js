@@ -37,13 +37,11 @@
   }
 
   // -----------------------------
-  // LANDING PAGE ONLY
+  // LANDING PAGE LOGIC (only if buttons exist)
   // -----------------------------
   const yesBtn = document.getElementById("yesBtn");
   let noBtn = document.getElementById("noBtn");
   const toast = document.getElementById("toast");
-
-  if (!yesBtn || !noBtn) return;
 
   // Detect “mobile-ish” (coarse pointer / touch)
   const isMobile = window.matchMedia("(pointer: coarse)").matches;
@@ -80,201 +78,230 @@
     }, 450);
   }
 
-  // ---- keep NO perfectly anchored (prevents “sliding” on mobile) ----
-  const NO_ANCHOR = {
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-  };
+  // Only bind landing behaviour if the elements exist on this page
+  if (yesBtn && noBtn && toast) {
+    // ---- keep NO perfectly anchored (prevents “sliding” on mobile) ----
+    const NO_ANCHOR = {
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+    };
 
-  function anchorNo() {
-    // If your CSS already sets absolute for .btn-no, this just enforces it.
-    noBtn.style.position = "absolute";
-    noBtn.style.left = NO_ANCHOR.left;
-    noBtn.style.top = NO_ANCHOR.top;
-    noBtn.style.transform = NO_ANCHOR.transform;
-    noBtn.style.transformOrigin = "center";
-  }
-
-  function setNoVisible(visible) {
-    if (visible) {
-      noBtn.style.opacity = "1";
-      noBtn.style.visibility = "visible";
-      noBtn.style.pointerEvents = "auto";
-      // re-apply anchor each time (some mobile browsers get weird after taps)
-      anchorNo();
-    } else {
-      noBtn.style.opacity = "0";
-      noBtn.style.visibility = "hidden";
-      noBtn.style.pointerEvents = "none";
+    function anchorNo() {
+      noBtn.style.position = "absolute";
+      noBtn.style.left = NO_ANCHOR.left;
+      noBtn.style.top = NO_ANCHOR.top;
+      noBtn.style.transform = NO_ANCHOR.transform;
+      noBtn.style.transformOrigin = "center";
     }
-  }
 
-  // Convert NO -> YES (mobile)
-  function convertNoToYes() {
-    // Make sure it's visible before converting (so it doesn’t “jump”)
-    setNoVisible(true);
-
-    noBtn.textContent = "Yes 🖤";
-    noBtn.classList.remove("btn-no");
-    noBtn.classList.add("btn-yes");
-
-    // Clone to drop old handlers cleanly
-    const clone = noBtn.cloneNode(true);
-    noBtn.parentNode.replaceChild(clone, noBtn);
-    noBtn = clone;
-
-    // Keep it anchored in the same spot (no movement)
-    anchorNo();
-
-    // Wire as YES
-    noBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      enterSite();
-    });
-    noBtn.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      enterSite();
-    });
-
-    showToast(toast, "Okay fine. YES it is 🖤");
-  }
-
-  // -----------------------------
-  // DESKTOP: NO vanishes when approached
-  // -----------------------------
-  if (!isMobile) {
-    const SAFE_DISTANCE = 170;
-    const MOVE_COOLDOWN_MS = 60;
-    let lastMove = 0;
-    let hidden = false;
-
-    function setNoVisibleDesktop(visible) {
+    function setNoVisible(visible) {
       if (visible) {
         noBtn.style.opacity = "1";
         noBtn.style.visibility = "visible";
         noBtn.style.pointerEvents = "auto";
-        hidden = false;
+        anchorNo();
       } else {
         noBtn.style.opacity = "0";
         noBtn.style.visibility = "hidden";
         noBtn.style.pointerEvents = "none";
-        hidden = true;
       }
     }
 
-    function escapeNo() {
-      setNoVisibleDesktop(false);
-      showToast(toast, desktopMessage());
-    }
-
-    function tryReappear(e) {
-      if (!hidden) return;
-      const r = noBtn.getBoundingClientRect();
-      const buffer = 18;
-      const over =
-        e.clientX >= r.left - buffer &&
-        e.clientX <= r.right + buffer &&
-        e.clientY >= r.top - buffer &&
-        e.clientY <= r.bottom + buffer;
-
-      if (!over) setNoVisibleDesktop(true);
-    }
-
-    document.addEventListener("mousemove", (e) => {
-      const now = Date.now();
-      if (now - lastMove < MOVE_COOLDOWN_MS) return;
-      lastMove = now;
-
-      if (hidden) {
-        tryReappear(e);
-        return;
-      }
-
-      const rect = noBtn.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < SAFE_DISTANCE) escapeNo();
-    });
-
-    noBtn.addEventListener("mouseenter", escapeNo);
-    noBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      escapeNo();
-    });
-  }
-
-  // -----------------------------
-  // MOBILE: allow 4 taps, but NO must NOT MOVE:
-  // it DISAPPEARS for a moment, then returns to the same spot.
-  // -----------------------------
-  if (isMobile) {
-    let noTaps = 0;
-    let coolingDown = false;
-    const DISAPPEAR_MS = 650; // "few seconds" is a lot; this feels snappy but obvious
-
-    // Ensure NO is anchored on load
-    window.addEventListener("load", () => {
-      anchorNo();
+    // Convert NO -> YES (mobile)
+    function convertNoToYes() {
       setNoVisible(true);
-    });
 
-    noBtn.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      noBtn.textContent = "Yes 🖤";
+      noBtn.classList.remove("btn-no");
+      noBtn.classList.add("btn-yes");
 
-      // Prevent double-fire (pointerdown + click)
-      if (coolingDown) return;
-      coolingDown = true;
+      // Clone to drop old handlers cleanly
+      const clone = noBtn.cloneNode(true);
+      noBtn.parentNode.replaceChild(clone, noBtn);
+      noBtn = clone;
 
-      // Remove focus to avoid any weird mobile focus shifting
-      try { noBtn.blur(); } catch (_) {}
+      // Keep it anchored in the same spot (no movement)
+      anchorNo();
 
-      // Hide instantly (no movement)
-      setNoVisible(false);
+      // Wire as YES
+      noBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        enterSite();
+      });
+      noBtn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        enterSite();
+      });
 
-      // Count taps
-      noTaps += 1;
+      showToast(toast, "Okay fine. YES it is 🖤");
+    }
 
-      showToast(
-        toast,
-        TOASTS_MOBILE_TAPS[Math.min(noTaps - 1, TOASTS_MOBILE_TAPS.length - 1)]
-      );
+    // -----------------------------
+    // DESKTOP: NO vanishes when approached
+    // -----------------------------
+    if (!isMobile) {
+      const SAFE_DISTANCE = 170;
+      const MOVE_COOLDOWN_MS = 60;
+      let lastMove = 0;
+      let hidden = false;
 
-      // After the disappear delay, either re-show NO in the SAME spot or convert it
-      setTimeout(() => {
-        if (noTaps >= 4) {
-          convertNoToYes();
+      function setNoVisibleDesktop(visible) {
+        if (visible) {
+          noBtn.style.opacity = "1";
+          noBtn.style.visibility = "visible";
+          noBtn.style.pointerEvents = "auto";
+          hidden = false;
         } else {
-          setNoVisible(true);
+          noBtn.style.opacity = "0";
+          noBtn.style.visibility = "hidden";
+          noBtn.style.pointerEvents = "none";
+          hidden = true;
         }
-        coolingDown = false;
-      }, DISAPPEAR_MS);
-    });
+      }
 
-    // Block click (some browsers fire it after pointerdown)
-    noBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-  }
+      function escapeNo() {
+        setNoVisibleDesktop(false);
+        showToast(toast, desktopMessage());
+      }
 
-  // -----------------------------
-  // YES: always enters
-  // -----------------------------
-  yesBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    enterSite();
-  });
+      function tryReappear(e) {
+        if (!hidden) return;
+        const r = noBtn.getBoundingClientRect();
+        const buffer = 18;
+        const over =
+          e.clientX >= r.left - buffer &&
+          e.clientX <= r.right + buffer &&
+          e.clientY >= r.top - buffer &&
+          e.clientY <= r.bottom + buffer;
 
-  yesBtn.addEventListener("pointerdown", (e) => {
+        if (!over) setNoVisibleDesktop(true);
+      }
+
+      document.addEventListener("mousemove", (e) => {
+        const now = Date.now();
+        if (now - lastMove < MOVE_COOLDOWN_MS) return;
+        lastMove = now;
+
+        if (hidden) {
+          tryReappear(e);
+          return;
+        }
+
+        const rect = noBtn.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < SAFE_DISTANCE) escapeNo();
+      });
+
+      noBtn.addEventListener("mouseenter", escapeNo);
+      noBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        escapeNo();
+      });
+    }
+
+    // -----------------------------
+    // MOBILE: allow 4 taps, NO disappears briefly, then returns;
+    // on tap 4 converts to YES.
+    // -----------------------------
     if (isMobile) {
+      let noTaps = 0;
+      let coolingDown = false;
+      const DISAPPEAR_MS = 650;
+
+      window.addEventListener("load", () => {
+        anchorNo();
+        setNoVisible(true);
+      });
+
+      noBtn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (coolingDown) return;
+        coolingDown = true;
+
+        try { noBtn.blur(); } catch (_) {}
+
+        setNoVisible(false);
+
+        noTaps += 1;
+
+        showToast(
+          toast,
+          TOASTS_MOBILE_TAPS[Math.min(noTaps - 1, TOASTS_MOBILE_TAPS.length - 1)]
+        );
+
+        setTimeout(() => {
+          if (noTaps >= 4) {
+            convertNoToYes();
+          } else {
+            setNoVisible(true);
+          }
+          coolingDown = false;
+        }, DISAPPEAR_MS);
+      });
+
+      noBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    }
+
+    // -----------------------------
+    // YES: always enters
+    // -----------------------------
+    yesBtn.addEventListener("click", (e) => {
       e.preventDefault();
       enterSite();
-    }
-  });
+    });
+
+    yesBtn.addEventListener("pointerdown", (e) => {
+      if (isMobile) {
+        e.preventDefault();
+        enterSite();
+      }
+    });
+  }
+
+  // =========================================================
+  // GALLERY: Build carousel slides + indicators (01.jpeg -> 40.jpeg)
+  // Runs ONLY if gallery elements exist (no inline JS needed)
+  // =========================================================
+  const carouselInner = document.getElementById("carouselInner");
+  const carouselIndicators = document.getElementById("carouselIndicators");
+
+  if (carouselInner && carouselIndicators) {
+    const photos = Array.from({ length: 40 }, (_, i) => {
+      const n = String(i + 1).padStart(2, "0");
+      return `assets/images/${n}.jpeg`;
+    });
+
+    photos.forEach((src, i) => {
+      const ind = document.createElement("button");
+      ind.type = "button";
+      ind.dataset.bsTarget = "#photoCarousel";
+      ind.dataset.bsSlideTo = String(i);
+      ind.setAttribute("aria-label", `Slide ${i + 1}`);
+      if (i === 0) ind.classList.add("active");
+      carouselIndicators.appendChild(ind);
+
+      const item = document.createElement("div");
+      item.className = `carousel-item${i === 0 ? " active" : ""}`;
+
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = `Photo ${i + 1}`;
+      img.loading = i < 2 ? "eager" : "lazy";
+      img.className = "d-block w-100";
+
+      item.appendChild(img);
+      carouselInner.appendChild(item);
+    });
+  }
 })();
