@@ -178,35 +178,36 @@ p{
   transform:translateX(-50%) translateY(-6px);
 }
 
-/* -----------------------------
-   CAROUSEL (new)
-   - stays a sane size inside a frame
-   - responsive ratio
------------------------------- */
+/* --------------------------------------------------
+   Carousel (show FULL image, no cropping)
+--------------------------------------------------- */
 .carousel-wrap{
-  width:100%;
-  border-radius:18px;
-  overflow:hidden;
-  border:1px solid var(--border);
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  width: 100%;
+  margin-top: 16px;
 }
 
+/* This creates a consistent “frame” that won’t make the card huge */
 .carousel-frame{
-  aspect-ratio: 4 / 3;
-  max-height: 420px;
-  width:100%;
+  width: 100%;
+  height: min(52vh, 520px); /* responsive but capped */
+  background: rgba(0,0,0,.18);
+  border-radius: 18px;
 }
 
-.carousel-frame .carousel-item,
-.carousel-frame img{
-  width:100%;
-  height:100%;
+/* Make each slide take full frame height */
+.carousel-frame .carousel-item{
+  height: 100%;
 }
 
+/* Full image visible: contain (no crop) */
 .carousel-frame img{
-  object-fit:cover;
-  display:block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;     /* KEY CHANGE */
+  object-position: center;
+  display: block;
 }
+
 
 /* Slightly taller on small screens so faces don’t get cropped too hard */
 @media (max-width:520px){
